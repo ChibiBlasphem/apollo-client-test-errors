@@ -3,32 +3,31 @@ import { Form, Field } from 'react-final-form'
 import { FormButton } from '../components/FormButton'
 import { Feedback } from '../components/Feedback'
 import { useLoginMutation } from '../apollo/hooks/useLoginMutation'
-import { FORM_ERROR } from 'final-form'
+import { FORM_ERROR, SubmissionErrors } from 'final-form'
 
 const required = (value: string) => (value ? undefined : 'required')
 
 export function Login() {
-  const [login] = useLoginMutation({
-    key: 'login',
+  const [login] = useLoginMutation<SubmissionErrors | void>({
+    errorConfig: {
+      unexpectedError: err => {
+        return { [FORM_ERROR]: 'An unexpected error occured' }
+      },
+      cases: {
+        Authentication: ({ token }) => {
+          console.log('We are authenticated', token)
+        },
+        BadInputError: () => {},
+        InvalidCredentialsError: ({ message }) => {
+          return { [FORM_ERROR]: message }
+        },
+      },
+    },
   })
   const onSubmit = (values: any) => {
     return login({
       variables: {
         input: values,
-      },
-      errorConfig: {
-        unexpectedError: err => {
-          return { [FORM_ERROR]: 'An unexpected error occured' }
-        },
-        cases: {
-          Authentication: ({ token }) => {
-            console.log('We are authenticated', token)
-          },
-          BadInputError: () => {},
-          InvalidCredentialsError: ({ message }) => {
-            return { [FORM_ERROR]: message }
-          },
-        },
       },
     })
   }

@@ -1,7 +1,7 @@
 import { gql } from '@apollo/client'
 import {
   useGatewayMutation,
-  UseGatewayMutation,
+  GatewayMutationHookOptions,
 } from '../../shared/utils/handleMutationResult'
 import {
   LoginMutation,
@@ -27,8 +27,11 @@ const LOGIN_MUTATION = gql`
   }
 `
 
-export const useLoginMutation: UseGatewayMutation<
-  LoginMutation,
-  LoginMutationVariables,
-  'login'
-> = options => useGatewayMutation(LOGIN_MUTATION, options)
+export const useLoginMutation = <TOut>(
+  options: GatewayMutationHookOptions<
+    LoginMutation,
+    LoginMutationVariables,
+    'login',
+    TOut
+  >
+) => useGatewayMutation(LOGIN_MUTATION, options, 'login')

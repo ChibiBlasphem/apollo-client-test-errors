@@ -1,7 +1,5 @@
 import {
   useMutation,
-  gql,
-  FetchResult,
   DocumentNode,
   MutationHookOptions,
   MutationFunctionOptions,
@@ -32,12 +30,6 @@ type InferedGqlObject<
   Typename extends Object['__typename']
 > = Object extends { __typename: Typename } & infer Rest ? Rest : never
 
-type CallMut<TData> = (options: any) => Promise<FetchResult<TData>>
-const handleMutationResult = <TData>(
-  callMut: CallMut<TData>,
-  key: keyof TData
-) => {}
-
 type GatewayMutationErrorConfig<TOut, TData extends GqlObject> = {
   unexpectedError: (err: any) => TOut
   cases: {
@@ -45,39 +37,33 @@ type GatewayMutationErrorConfig<TOut, TData extends GqlObject> = {
   }
 }
 
-type UseGatewayMutationHookOptions<
+export type GatewayMutationHookOptions<
   TData extends { [k in TKeyname]: GqlObject },
   TVariables,
-  TKeyname extends keyof TData
-> = MutationHookOptions<TData, TVariables> & {
-  key: TKeyname
-}
-
-type GatewayMutationFunctionOptions<
-  TOut,
-  TData extends { [k in TKeyname]: GqlObject },
-  TVariables,
-  TKeyname extends keyof TData
+  TKeyname extends keyof TData,
+  TOut
 > = MutationHookOptions<TData, TVariables> & {
   errorConfig: GatewayMutationErrorConfig<TOut, TData[TKeyname]>
 }
 
 type GatewayMutationFunction<
   TData extends { [k in TKeyname]: GqlObject },
-  TVariables = undefined,
-  TKeyname extends string = string
-> = <TOut>(
-  options: GatewayMutationFunctionOptions<TOut, TData, TVariables, TKeyname>
+  TVariables,
+  TKeyname extends string,
+  TOut
+> = (
+  options: MutationFunctionOptions<TData, TVariables>
 ) => Promise<TOut | undefined>
 
 export type UseGatewayMutation<
   TData extends { [k in TKeyname]: GqlObject },
-  TVariables = undefined,
-  TKeyname extends string = string
+  TVariables,
+  TKeyname extends string,
+  TOut = any
 > = (
-  options: UseGatewayMutationHookOptions<TData, TVariables, TKeyname>
+  options: GatewayMutationHookOptions<TData, TVariables, TKeyname, TOut>
 ) => [
-  GatewayMutationFunction<TData, TVariables, TKeyname>,
+  GatewayMutationFunction<TData, TVariables, TKeyname, TOut>,
   {
     data: TData[TKeyname] | undefined
   }
@@ -86,12 +72,17 @@ export type UseGatewayMutation<
 export const useGatewayMutation = <
   TData extends { [k in TKeyname]: GqlObject },
   TVariables = undefined,
-  TKeyname extends string = string
+  TKeyname extends string = string,
+  TOut = any
 >(
   mutation: DocumentNode,
-  { key, ...rest }: UseGatewayMutationHookOptions<TData, TVariables, TKeyname>
+  {
+    errorConfig,
+    ...rest
+  }: GatewayMutationHookOptions<TData, TVariables, TKeyname, TOut>,
+  key: TKeyname
 ): [
-  GatewayMutationFunction<TData, TVariables, TKeyname>,
+  GatewayMutationFunction<TData, TVariables, TKeyname, TOut>,
   {
     data: TData[TKeyname] | undefined
   }
@@ -99,17 +90,11 @@ export const useGatewayMutation = <
   const [originalCallMut, res] = useMutation<TData, TVariables>(mutation, rest)
 
   const callMut = useCallback(
-    async <TOut>({
-      errorConfig,
-      ...rest
-    }: GatewayMutationFunctionOptions<
-      TOut,
-      TData,
-      TVariables,
-      TKeyname
-    >): Promise<TOut | undefined> => {
+    async (
+      options: MutationFunctionOptions<TData, TVariables>
+    ): Promise<TOut | undefined> => {
       try {
-        const { data, errors } = await originalCallMut(rest)
+        const { data, errors } = await originalCallMut(options)
         if (errors) {
           throw errors
         }
