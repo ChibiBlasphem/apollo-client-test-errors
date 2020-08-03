@@ -6,21 +6,6 @@ import {
 } from '@apollo/client'
 import { useCallback } from 'react'
 
-type TestObject =
-  | {
-      __typename: 'TestObject1'
-      field1: string
-    }
-  | {
-      __typename: 'TestObject2'
-      field2: string
-    }
-
-const testObject: TestObject = {
-  __typename: 'TestObject2',
-  field2: 'Hello world',
-}
-
 type GqlObject<Typename extends string = string> = {
   __typename: Typename
 }
